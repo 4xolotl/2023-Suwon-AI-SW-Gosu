@@ -255,55 +255,55 @@ public class MovementScorer
             {
                 jointMatch += 1;
             }
-            else
+            else if (mostDis_val < distance)
             {
-                if (distance < mostDis_val) continue;
                 mostDis_val = distance;
                 mostDis_i = i;
+            }
+        }
 
-                float xDif = targetData.x - baselineData.x; // x 값의 차이
-                float yDif = targetData.y - baselineData.y; // y 값의 차이
-                float zDif = targetData.z - baselineData.z; // z 값의 차이
+        float xDif = targetData.x - baselineData.x; // x 값의 차이
+        float yDif = targetData.y - baselineData.y; // y 값의 차이
+        float zDif = targetData.z - baselineData.z; // z 값의 차이
 
-                //절댓값 저장 -> 가장 잘못된 부분 찾기
-                float absXDif = Mathf.Abs(xDif);
-                float absYDif = Mathf.Abs(yDif);
-                float absZDif = Mathf.Abs(zDif);
+        //절댓값 저장 -> 가장 잘못된 부분 찾기
+        float absXDif = Mathf.Abs(xDif);
+        float absYDif = Mathf.Abs(yDif);
+        float absZDif = Mathf.Abs(zDif);
+        string[] jointName = { "머리", "왼쪽 어깨", "오른쪽 어깨", "왼쪽 팔꿈치", "오른쪽 팔꿈치", "왼쪽 손목", "오른쪽 손목", "몸"/*왼쪽 골반*/, "몸"/*오른쪽 골반*/, "왼쪽 무릎", "오른쪽 무릎", "왼쪽 발목", "오른쪽 발목" };
 
-                if (absXDif > absYDif && absXDif > absZDif)
-                {
-                    if (xDif < 0)
-                    {
-                        targetData[i]
-                        string hoonsu = "왼쪽으로 이동해주세요";
-                    }
-                    else
-                    {
-                        string hoonsu = "오른쪽으로 이동해주세요";
-                    }
-                }
-                else if (absYDif > absXDif && absYDif > absZDif)
-                {
-                    if (yDif < 0)
-                    {
-                        string hoonsu = "";
-                    }
-                    else
-                    {
-                        string hoonsu = "";
-                    }
-                }
-                else
-                {
-                    if (zDif < 0)
-                    {
-                        string hoonsu = "";
-                    }
-                    else
-                    {
-                        string hoonsu = "";
-                    }
-                }
+        if (absXDif > absYDif && absXDif > absZDif)
+        {
+            if (xDif < 0)
+            {
+                targetData[i]
+                string hoonsu = "왼쪽으로 이동해주세요";
+            }
+            else
+            {
+                string hoonsu = "오른쪽으로 이동해주세요";
+            }
+        }
+        else if (absYDif > absXDif && absYDif > absZDif)
+        {
+            if (yDif < 0)
+            {
+                string hoonsu = "";
+            }
+            else
+            {
+                string hoonsu = "";
+            }
+        }
+        else
+        {
+            if (zDif < 0)
+            {
+                string hoonsu = "";
+            }
+            else
+            {
+                string hoonsu = "";
             }
         }
 
