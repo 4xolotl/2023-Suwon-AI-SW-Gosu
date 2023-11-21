@@ -200,19 +200,15 @@ public class MovementScorer
 {
     private Vector3[] mediaMarking; // [조인트] 저장하는 1차원 배열
 
-    public MovementScorer(int numberOfLevels, int numberOfJoints)
+    public MovementScorer(int level, int numberOfJoints)
     {
-        for (int i = 0; i < numberOfLevels; i++)
-        {
-            LoadMovementData(i + 1, numberOfJoints);
-        }
+        LoadMovementData(level, numberOfJoints);
     }
 
     // 레벨별 데이터 불러오는 메소드
     private void LoadMovementData(int level, int numberOfJoints)
     {
         string filePath = $"Assets/Avartar/JointTextFile2/Level_{level}.txt"; //Level별로 저장된 txt 파일 불러오기
-#define numOfJoints 
 
         if (File.Exists(filePath)) //파일 유효성 검사
         {
@@ -226,7 +222,7 @@ public class MovementScorer
                 for (int j = 0; j < numberOfJoints; j++) // j == 조인트 인덱스, 13개를 순차적으로 처리합니다
                 {
                     int index = i * numberOfJoints + j; // index == (j번째 조인트)/(n번째 프레임 관절세트)
-                    // x, y, z 파싱 & 형변환해서 벡터로 저장
+                    // x, y, z 형변환해서 벡터로 저장
                     mediaMarking[index].x = float.Parse(jointData[0]);
                     mediaMarking[index].y = float.Parse(jointData[1]);
                     mediaMarking[index].z = float.Parse(jointData[2]);
@@ -253,43 +249,61 @@ public class MovementScorer
         for (int i = 0; i < baselineData.Length; i++) // i == 답지 라인 순번
         {
             float distance = Vector3.Distance(baselineData[i], targetData[i]);
-            float xDif, yDif, zDif, most; //x, y, z 차이, 가장 큰 값 저장
-
-            xDif = targetData.x - baselineData.x;
-            yDif = targetData.y - baselineData.y;
-            zDif = targetData.z - baselineData.z;
-
-            if (xDif < yDif)
-            {
-                if (zDif < yDif)
-                {
-                    most = yDif;
-                }
-                else
-                {
-                    most = xDif < zDif ? zDif : xDif;
-                }
-            }
-            else if (xDif < zDif)
-            {
-                if (yDif < zDif)
-                {
-                    most = zDif;
-                }
-                else
-                {
-                    most = xDif < yDif ? yDif : xDif;
-                }
-            }
+            int mostDis_i, mostDis_val=0;
 
             if (distance < 0.2f) // 0.2보다 가까운 조인트 수 카운트
             {
                 jointMatch += 1;
             }
-
-            else if (baselineData[0])
+            else
             {
+                if (distance < mostDis_val) continue;
+                mostDis_val = distance;
+                mostDis_i = i;
 
+                float xDif = targetData.x - baselineData.x; // x 값의 차이
+                float yDif = targetData.y - baselineData.y; // y 값의 차이
+                float zDif = targetData.z - baselineData.z; // z 값의 차이
+
+                //절댓값 저장 -> 가장 잘못된 부분 찾기
+                float absXDif = Mathf.Abs(xDif);
+                float absYDif = Mathf.Abs(yDif);
+                float absZDif = Mathf.Abs(zDif);
+
+                if (absXDif > absYDif && absXDif > absZDif)
+                {
+                    if (xDif < 0)
+                    {
+                        targetData[i]
+                        string hoonsu = "왼쪽으로 이동해주세요";
+                    }
+                    else
+                    {
+                        string hoonsu = "오른쪽으로 이동해주세요";
+                    }
+                }
+                else if (absYDif > absXDif && absYDif > absZDif)
+                {
+                    if (yDif < 0)
+                    {
+                        string hoonsu = "";
+                    }
+                    else
+                    {
+                        string hoonsu = "";
+                    }
+                }
+                else
+                {
+                    if (zDif < 0)
+                    {
+                        string hoonsu = "";
+                    }
+                    else
+                    {
+                        string hoonsu = "";
+                    }
+                }
             }
         }
 
