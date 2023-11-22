@@ -247,7 +247,7 @@ public class MovementScorer
         }
 
         Vector3 hoonsu = new Vector3;
-        int mostDis_i = 0;
+        int mostDis_i = 0, mostDis_val = 0;
 
         for (int i = 0; i < baselineData.Length; i++) // i == 답지 라인 순번
         {
@@ -261,6 +261,7 @@ public class MovementScorer
             {
                 hoonsu = targetData[i];
                 mostDis_i = i;
+                mostDis_val = distance;
             }
         }
 
