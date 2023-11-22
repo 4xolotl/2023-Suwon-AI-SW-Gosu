@@ -236,7 +236,7 @@ public class MovementScorer
     }
 
     // 채점하는 메소드
-    public int ScoreMovement(Vector3[] baselineData, Vector3[] targetData) // baseline == 답지, target == 사람 데이터, 프레임별로 불러오게 했는데 수정해도 될듯
+    public int ScoreMovement(Vector3[] baselineData, Vector3[] targetData) // baseline == 답지, target == 사람 데이터, 프레임별로 호출하면 됨
     {
         int jointMatch = 0;
 
@@ -246,10 +246,12 @@ public class MovementScorer
             return 0.0f;
         }
 
+        Vector3 hoonsu = new Vector3;
+        int mostDis_i = 0;
+
         for (int i = 0; i < baselineData.Length; i++) // i == 답지 라인 순번
         {
             float distance = Vector3.Distance(baselineData[i], targetData[i]);
-            int mostDis_i, mostDis_val=0;
 
             if (distance < 0.2f) // 0.2보다 가까운 조인트 수 카운트
             {
@@ -257,55 +259,55 @@ public class MovementScorer
             }
             else if (mostDis_val < distance)
             {
-                mostDis_val = distance;
+                hoonsu = targetData[i];
                 mostDis_i = i;
             }
         }
 
-        float xDif = targetData.x - baselineData.x; // x 값의 차이
-        float yDif = targetData.y - baselineData.y; // y 값의 차이
-        float zDif = targetData.z - baselineData.z; // z 값의 차이
+        float xDif = hoonsu.x - baselineData[mostDis_i].x; // x 값의 차이
+        float yDif = hoonsu.y - baselineData[mostDis_i].y; // y 값의 차이
+        float zDif = hoonsu.z - baselineData[mostDis_i].z; // z 값의 차이
 
         //절댓값 저장 -> 가장 잘못된 부분 찾기
         float absXDif = Mathf.Abs(xDif);
         float absYDif = Mathf.Abs(yDif);
         float absZDif = Mathf.Abs(zDif);
         string[] jointName = { "머리", "왼쪽 어깨", "오른쪽 어깨", "왼쪽 팔꿈치", "오른쪽 팔꿈치", "왼쪽 손목", "오른쪽 손목", "몸"/*왼쪽 골반*/, "몸"/*오른쪽 골반*/, "왼쪽 무릎", "오른쪽 무릎", "왼쪽 발목", "오른쪽 발목" };
-
+        string hoonsuWay;
         if (absXDif > absYDif && absXDif > absZDif)
         {
             if (xDif < 0)
             {
-                targetData[i]
-                string hoonsu = "왼쪽으로 이동해주세요";
+                hoonsuWay = "왼쪽";
             }
             else
             {
-                string hoonsu = "오른쪽으로 이동해주세요";
+                hoonsuWay = "오른쪽";
             }
         }
         else if (absYDif > absXDif && absYDif > absZDif)
         {
             if (yDif < 0)
             {
-                string hoonsu = "";
+                hoonsuWay = "위";
             }
             else
             {
-                string hoonsu = "";
+                hoonsuWay = "아래";
             }
         }
         else
         {
             if (zDif < 0)
             {
-                string hoonsu = "";
+                hoonsuWay = "앞";
             }
             else
             {
-                string hoonsu = "";
+                hoonsuWay = "뒤";
             }
         }
+        var hoonsuMessage = String.Join(jointName, "을/를", hoonsuWay, "(으)로 이동하세요");
 
         return jointMatch;
     }
