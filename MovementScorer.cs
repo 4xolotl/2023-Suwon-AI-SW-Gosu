@@ -59,12 +59,11 @@ public class MovementScorer : MonoBehaviour
         Vector3 hoonsu = new Vector3();
         int mostDis_i = 0;
         float mostDis_val = 0;
-        float videoRate, camRate, correctionRate;
-        videoRate = (baselineData[1].y + baselineData[2].y) / 2 - (baselineData[7].y + baselineData[8].y) / 2;
-        camRate = (targetData[1].y + targetData[2].y) / 2 - (targetData[7].y + targetData[8].y) / 2;
+        float correctionRate, baseLong, targetLong;
 
-        correctionRate = videoRate / camRate;
-
+        baseLong = Vector3.Distance(baselineData[1], baselineData[7]);
+        targetLong = Vector3.Distance(targetData[1], targetData[7]);
+        correctionRate = baseLong - targetLong;
 
         //0: 몸
         //1, 2: 왼쪽 어깨, 오른쪽 어깨
@@ -84,7 +83,7 @@ public class MovementScorer : MonoBehaviour
 
         for (int i = 1; i < baselineData.Length; i++) // i == 답지 라인 순번
         {   
-            float distance = correctionRate * Vector3.Distance(baselineData[i], targetData[i]);
+            float distance = Vector3.Distance(baselineData[i], targetData[i]) + correctionRate;
 
             if (distance < 0.5f) // 0.2보다 가까운 조인트 수 카운트
             {
