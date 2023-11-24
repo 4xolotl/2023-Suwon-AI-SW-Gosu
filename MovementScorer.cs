@@ -54,6 +54,26 @@ public class MovementScorer : MonoBehaviour
     public int ScoreMovement(Vector3[] baselineData, Vector3[] targetData) // baseline == 답지, target == 사람 데이터, 프레임별로 호출하면 됨
     {
         int jointMatch = 0;
+        string[] jointName = { "머리", "왼쪽 어깨", "오른쪽 어깨", "왼쪽 팔꿈치", "오른쪽 팔꿈치", "왼쪽 손목", "오른쪽 손목", "몸"/*왼쪽 골반*/, "몸"/*오른쪽 골반*/, "왼쪽 무릎", "오른쪽 무릎", "왼쪽 발목", "오른쪽 발목" };
+        string hoonsuWay;
+        Vector3 hoonsu = new Vector3();
+        int mostDis_i = 0;
+        float mostDis_val = 0;
+        float videoRate, camRate, correctionRate;
+        videoRate = (baselineData[1].y + baselineData[2].y) / 2 - (baselineData[7].y + baselineData[8].y) / 2;
+        camRate = (targetData[1].y + targetData[2].y) / 2 - (targetData[7].y + targetData[8].y) / 2;
+
+        correctionRate = videoRate / camRate;
+
+
+        //0: 몸
+        //1, 2: 왼쪽 어깨, 오른쪽 어깨
+        //3, 4: 왼쪽 팔꿈치, 오른쪽 팔꿈치
+        //5, 6: 왼쪽 손목, 오른쪽 손목
+        //7, 8: 왼쪽 골반, 오른쪽 골반
+        //9, 10: 왼쪽 무릎, 오른쪽 무릎
+        //11, 12: 왼쪽 발목, 오른쪽 발목
+
 
         if (baselineData.Length != targetData.Length)
         {
@@ -61,15 +81,12 @@ public class MovementScorer : MonoBehaviour
             return 0;
         }
 
-        Vector3 hoonsu = new Vector3();
-        int mostDis_i = 0;
-        float mostDis_val = 0;
 
         for (int i = 1; i < baselineData.Length; i++) // i == 답지 라인 순번
         {   
-            float distance = Vector3.Distance(baselineData[i], targetData[i]);
+            float distance = correctionRate * Vector3.Distance(baselineData[i], targetData[i]);
 
-            if (distance < 0.2f) // 0.2보다 가까운 조인트 수 카운트
+            if (distance < 0.5f) // 0.2보다 가까운 조인트 수 카운트
             {
                 jointMatch += 1;
             }
@@ -89,9 +106,7 @@ public class MovementScorer : MonoBehaviour
         float absXDif = Mathf.Abs(xDif);
         float absYDif = Mathf.Abs(yDif);
         float absZDif = Mathf.Abs(zDif);
-        string[] jointName = { "머리", "왼쪽 어깨", "오른쪽 어깨", "왼쪽 팔꿈치", "오른쪽 팔꿈치", "왼쪽 손목", "오른쪽 손목", "몸"/*왼쪽 골반*/, "몸"/*오른쪽 골반*/, "왼쪽 무릎", "오른쪽 무릎", "왼쪽 발목", "오른쪽 발목" };
-        string hoonsuWay;
-
+        
         if (absXDif > absYDif && absXDif > absZDif)
         {
             if (xDif < 0)
