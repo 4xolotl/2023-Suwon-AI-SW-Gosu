@@ -16,7 +16,7 @@ desired_indices = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
 
 # TCP 서버 생성
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind(('172.20.10.13', 9615))
+server_socket.bind(('localhost', 포트번호))
 server_socket.listen(1)  # 최대 1개의 연결을 기다림
 
 print("서버가 연결을 대기 중입니다.")
