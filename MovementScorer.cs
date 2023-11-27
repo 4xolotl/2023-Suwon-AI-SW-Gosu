@@ -51,19 +51,15 @@ public class MovementScorer : MonoBehaviour
     }
 
     // 채점하는 메소드
-    public int ScoreMovement(Vector3[] baselineData, Vector3[] targetData) // baseline == 답지, target == 사람 데이터, 프레임별로 호출하면 됨
+    public int ScoreMovement(Vector3[] baselineData, Vector3[] targetData, double correctionRate) // baseline == 답지, target == 사람 데이터, 프레임별로 호출하면 됨
     {
         int jointMatch = 0;
+
         string[] jointName = { "머리", "왼쪽 어깨", "오른쪽 어깨", "왼쪽 팔꿈치", "오른쪽 팔꿈치", "왼쪽 손목", "오른쪽 손목", "몸"/*왼쪽 골반*/, "몸"/*오른쪽 골반*/, "왼쪽 무릎", "오른쪽 무릎", "왼쪽 발목", "오른쪽 발목" };
         string hoonsuWay;
         Vector3 hoonsu = new Vector3();
         int mostDis_i = 0;
         float mostDis_val = 0;
-        float correctionRate, baseLong, targetLong;
-
-        baseLong = Vector3.Distance(baselineData[1], baselineData[7]);
-        targetLong = Vector3.Distance(targetData[1], targetData[7]);
-        correctionRate = baseLong - targetLong;
 
         //0: 몸
         //1, 2: 왼쪽 어깨, 오른쪽 어깨
@@ -73,19 +69,23 @@ public class MovementScorer : MonoBehaviour
         //9, 10: 왼쪽 무릎, 오른쪽 무릎
         //11, 12: 왼쪽 발목, 오른쪽 발목
 
-
         if (baselineData.Length != targetData.Length)
         {
             Debug.LogError("Invalid input"); // Data 유효성 검사
             return 0;
         }
-
+        Vector3 initPoint;
+        initPoint.x = 0;
+        initPoint.y = 0;
+        initPoint.z = 0;
 
         for (int i = 1; i < baselineData.Length; i++) // i == 답지 라인 순번
-        {   
-            float distance = Vector3.Distance(baselineData[i], targetData[i]) + correctionRate;
+        {
+            float targetDis = (float)correctionRate * Vector3.Distance(initPoint, targetData[i]);
+            float baselineDis = Vector3.Distance(initPoint, baselineData[i]);
+            float distance = Mathf.Abs(targetDis - baselineDis);
 
-            if (distance < 0.5f) // 0.2보다 가까운 조인트 수 카운트
+            if (distance < 0.9f) // 0.2보다 가까운 조인트 수 카운트
             {
                 jointMatch += 1;
             }
@@ -105,7 +105,7 @@ public class MovementScorer : MonoBehaviour
         float absXDif = Mathf.Abs(xDif);
         float absYDif = Mathf.Abs(yDif);
         float absZDif = Mathf.Abs(zDif);
-        
+
         if (absXDif > absYDif && absXDif > absZDif)
         {
             if (xDif < 0)
@@ -128,7 +128,7 @@ public class MovementScorer : MonoBehaviour
                 hoonsuWay = "아래";
             }
         }
-        else
+        else if (absZDif > absXDif && absZDif > absYDif)
         {
             if (zDif < 0)
             {
@@ -139,8 +139,21 @@ public class MovementScorer : MonoBehaviour
                 hoonsuWay = "앞";
             }
         }
-        hoonsuMessage = jointName[mostDis_i] + "을/를 " + hoonsuWay + "(으)로 이동하세요.";
+        else
+        {
+            hoonsuWay = "알수없음";
+        }
+
+        if (jointMatch >= 6)
+        {
+            hoonsuMessage = "잘 하고 있어요~";
+        }
+        else
+        {
+            hoonsuMessage = jointName[mostDis_i] + "을/를 " + hoonsuWay + "(으)로 이동하세요.";
+        }
 
         return jointMatch;
     }
 }
+
