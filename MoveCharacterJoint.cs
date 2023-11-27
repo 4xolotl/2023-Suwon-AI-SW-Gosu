@@ -11,26 +11,30 @@ using UnityEngine.Video;
 using System.Globalization;
 using System.Linq;
 using TMPro;
+using UnityEngine.UI;
 
 public class MoveCharacterJoint : MonoBehaviour
 {
     public int numberOfJoints = 13; // 관절 개수
     public int jointMatch; // 채점 맞는 개수
-    public MovementScorer scorer;
-    private int frameNum = 0;
+    public int totalScore; // 전체 점수(맞은 관절 개수)
+
+    public MovementScorer scorer;      //채점 기능을 위한 클래스
+    private int frameNum = 0;          //영상 프레임 개수
+    public Image hoonsuTextImage; //훈수 텍스트
     public TextMeshProUGUI hoonsuText;
 
-    //public VideoPlayer video; //비디오 플레이어
+    public VideoPlayer video; //비디오 플레이어
     int playCount = 0;        //비디오 재생 수
-    float startTime = 4f;     //타이머 설정 시간
-    bool startPlay;          
+    float startTime = 4f;     //타이머 설정 시간        
     public TextMeshProUGUI timertext; //타이머 표시 텍스트 오브젝트 
+    public TextMeshProUGUI resultText; // 합/불 표시
 
     Socket socket;
     public int textCount = 0; //행 개수
 
-    private Vector3 virtualNeck;
-    private Vector3 virtualHips;
+    private Vector3 virtualNeck; //목 가상 좌표
+    private Vector3 virtualHips; //골반 사이 기준점 가상 좌표
     private Vector3 virtualUpperChest;
     Vector3[] realJoint;
 
@@ -45,48 +49,60 @@ public class MoveCharacterJoint : MonoBehaviour
     void Start()
     {
         socket = null;
+        hoonsuText.text = " ";
         anim = GetComponent<Animator>();
-        if (LoadingScene.sock != null) {
+        if (LoadingScene.sock != null)
+        {
             socket = LoadingScene.sock; //로딩씬에서 연결한 소켓 이어받기
             Debug.Log("연결 완료");
-            StartCoroutine(PoseUpdate());   
+            StartCoroutine(PoseUpdate());
         }
-        playCount = 1;
 
         scorer = new MovementScorer(ScenesMove.nextStageNum, numberOfJoints);
-        
-            
+
+
     }
 
     //key: parent bone, value: StoreJointData 클래스
     private void AddModelJointData(HumanBodyBones parent, HumanBodyBones child, Vector3 trackParent, Vector3 trackChild)
-    {   
+    {
         limbsJointData.Add(parent,
             new StoreJointData(anim.GetBoneTransform(parent), anim.GetBoneTransform(child), trackParent, trackChild));
     }
 
-    //private void Update()
-    //{
-    //    if (!video.isPlaying && playCount < 4)
-    //    {
-    //        frameNum = 0;
-    //        timertext.gameObject.SetActive(true);
+    private void Update()
+    {
+        if (!video.isPlaying && playCount < 4)
+        {
+            frameNum = 0;
+            timertext.gameObject.SetActive(true);
 
-    //        if (startTime > 1f)
-    //        {
-    //            startTime -= Time.deltaTime;
-    //            int seconds = Mathf.FloorToInt(startTime % 60);
-    //            timertext.text = seconds.ToString(); // 몇초인지 텍스트 오브젝트에 표시
-    //        }
-    //        else
-    //        {
-    //            video.Play();
-    //            Debug.Log("비디오 재생");
-    //            playCount++;
-    //            startTime = 4f;
-    //        }
-    //    }
-    //}
+            if (startTime > 1f)
+            {
+                startTime -= Time.deltaTime;
+                int seconds = Mathf.FloorToInt(startTime % 60);
+                timertext.text = seconds.ToString(); // 몇초인지 텍스트 오브젝트에 표시
+            }
+            else
+            {
+                video.Play();
+                Debug.Log("비디오 재생");
+                playCount++;
+                startTime = 4f;
+            }
+        }
+        else if (!video.isPlaying && playCount == 4)
+        {
+            if (totalScore >= 200)
+            {
+                resultText.text = "합격";
+            }
+            else
+            {
+                resultText.text = "불합격";
+            }
+        }
+    }
 
     //답안지 배열 프레임 별로 나눠서 baseLineDataArray에 저장
     private Vector3[] MakeBaseLineDataArray(int num)
@@ -101,166 +117,159 @@ public class MoveCharacterJoint : MonoBehaviour
         return baseLineDataArray;
     }
 
-    private IEnumerator PoseUpdate() {
-        
-        while (poseUpdateCheck) {
+    private IEnumerator PoseUpdate()
+    {
+
+        while (poseUpdateCheck)
+        {
             realJoint = new Vector3[13]; // 텍스트 파일에서 읽어온 x,y,z로 캐릭터 실제 position값 저장
-            string[] textLine; 
+            string[] textLine;
             string[] splitXYZ;
             Vector3[] baseLineDataArray = new Vector3[13];
 
-            if (LoadingScene.socketConnect)
+            try
             {
-                byte[] buffer = new byte[4];
-                int byteCount = socket.Receive(buffer); //수신된 바이트 수를 정수로 전환한다. -> 3
-                //Debug.Log("받을 데이터 바이트 수: " + byteCount);
-                Array.Reverse(buffer);
-
-               
-                int dataByteCount = BitConverter.ToInt32(buffer, 0);
-                //Debug.Log("dataByteCount: " + dataByteCount);
-                byte[] receivedBuffer = new byte[dataByteCount]; // 받으려고 하는 데이터의 수만큼 byte 배열 선언
-                int dataCount = socket.Receive(receivedBuffer);
-            
-
-                string msg = Encoding.UTF8.GetString(receivedBuffer, 0, dataCount); // byte[] to string
-
-                textLine = msg.Split("\n");
-
-                //Debug.Log("textLine.Length: " + textLine.Length);
-
-                for (int i = 0; i < textLine.Length - 1; i++)
+                if (LoadingScene.socketConnect)
                 {
-                    string line = textLine[i];
+                    byte[] buffer = new byte[4];
+                    int byteCount = socket.Receive(buffer); //수신된 바이트 수를 정수로 전환한다. -> 3
+                    Array.Reverse(buffer);
 
-                    splitXYZ = line.Split(' ');
-                    if (splitXYZ.All(x => x is string))
+
+                    int dataByteCount = BitConverter.ToInt32(buffer, 0);
+                    byte[] receivedBuffer = new byte[dataByteCount]; // 받으려고 하는 데이터의 수만큼 byte 배열 선언
+                    int dataCount = socket.Receive(receivedBuffer);
+
+
+                    string msg = Encoding.UTF8.GetString(receivedBuffer, 0, dataCount); // byte[] to string
+
+                    textLine = msg.Split("\n");
+
+                    for (int i = 0; i < textLine.Length - 1; i++)
                     {
-                        realJoint[i].x = float.Parse(splitXYZ[0]);
-                        realJoint[i].y = float.Parse(splitXYZ[1]);
-                        realJoint[i].z = float.Parse(splitXYZ[2]);
-                    }
-                    else
-                    {
-                        realJoint[i].x = 0f;
-                        realJoint[i].y = 0f;
-                        realJoint[i].z = 0f;
+                        string line = textLine[i];
+
+                        splitXYZ = line.Split(' ');
+                        if (splitXYZ.All(x => x is string))
+                        {
+                            //Debug.Log("realJoint: " + realJoint[i].x);
+                            realJoint[i].x = float.Parse(splitXYZ[0]);
+                            realJoint[i].y = float.Parse(splitXYZ[1]);
+                            realJoint[i].z = float.Parse(splitXYZ[2]);
+                        }
+                        else
+                        {
+                            realJoint[i].x = 0f;
+                            realJoint[i].y = 0f;
+                            realJoint[i].z = 0f;
+                        }
                     }
                 }
             }
+            catch (Exception e)
+            {
+                Debug.Log("오류: " + e);
+            }
 
-            CharactorMove(); // 캐릭터 움직이는 코드
+            virtualHips = (realJoint[7] + realJoint[8]) / 2.0f;// 가상의 힙 관절의 위치 구하기
+            virtualHips.y += 0.075f;
+            virtualHips.y += 0.95f;
+            virtualHips.x -= 0.5f;
+            virtualHips.z += 0.5f;
 
-            //if (!video.isPlaying && playCount < 4)
-            //{
-            //    video.Play();
-            //    playCount++;
+            virtualNeck = (realJoint[1] + realJoint[2]) / 2.0f; // 가상의 목 관절의 위치 구하기
+            virtualNeck.y += 0.05f;
 
-            //    frameNum = 0;
-            //    timertext.gameObject.SetActive(true);
+            virtualUpperChest = (realJoint[1] + realJoint[2]) / 2.0f; //가상의 UpperChest 관절 위치 구하기
+            virtualUpperChest.y -= 0.1f;
+
+            for (int i = 0; i < 13; i++)
+            {
+                realJoint[i].y *= -1f; // 전달 받은 조인트 값의 y좌표가 땅과 반대로 되어있음
+                realJoint[i] += virtualHips; // pose_world_landmarks는 엉덩이 중간 포인트를 기준으로 상대좌표이므로 Hips의 위치를 더해 절대 좌표를 구해준다.
+                                             //Debug.Log("realJoint: " + realJoint[i]);
+            }
+
+            if (video.isPlaying)
+            {
+                if (playCount != 1) //영상 첫번째 재생은 그냥 보고 두번째 재생부터 채점 기능 들어감
+                {
+                    timertext.gameObject.SetActive(false);
+                    baseLineDataArray = MakeBaseLineDataArray(frameNum); //영상 프레임 별 관절 좌표 13개를 저장한 배열 만들기
+                    jointMatch = scorer.ScoreMovement(baseLineDataArray, realJoint, 0.48 / Vector3.Distance(CheckCharacterJoint.storeJointData[1], CheckCharacterJoint.storeJointData[7])); //답안지 배열과 실시간 통신으로 얻은 배열 채점 함수에 전달
+
+                    if (jointMatch >= 6)
+                    {
+                        totalScore++;
+                    }
+                    frameNum++; //답안지 배열 업데이트를 위한 프레임 수 증가
+                    hoonsuTextImage.gameObject.SetActive(true);
+                }
+                else
+                {
+                    timertext.gameObject.SetActive(false);
+                }
+            }
 
 
-            //    if (startTime > 1f)
-            //    {
-            //        startTime -= Time.deltaTime;
-            //        int seconds = Mathf.FloorToInt(startTime % 60);
-            //        timertext.text = seconds.ToString(); // 몇초인지 텍스트 오브젝트에 표시
-            //    }
-            //    else
-            //    {
-            //        video.Play();
-            //        Debug.Log("비디오 재생");
-            //        playCount++;
-            //        startTime = 4f;
-            //    }
-            //}
+            virtualNeck += virtualHips;
+            virtualUpperChest += virtualHips;
 
-            //if (video.isPlaying)
-            //{
-            //    timertext.gameObject.SetActive(false);
-            //    baseLineDataArray = MakeBaseLineDataArray(frameNum);
-            //    jointMatch = scorer.ScoreMovement(baseLineDataArray, realJoint);
-            //    frameNum++;
-            //    Debug.Log(scorer.hoonsuMessage);
-            //}
+            //상체 몸통 움직이기 위한 상체 관절 StoreJointData 클래스에 저장
+            rightHip = new StoreJointData(anim.GetBoneTransform(HumanBodyBones.Hips), anim.GetBoneTransform(HumanBodyBones.RightUpperLeg), virtualHips, realJoint[8]);
+            leftHip = new StoreJointData(anim.GetBoneTransform(HumanBodyBones.Hips), anim.GetBoneTransform(HumanBodyBones.LeftUpperLeg), virtualHips, realJoint[7]);
 
-           
-            //hoonsuText.text = scorer.hoonsuMessage;
-          
+            neckTwist = new StoreJointData(anim.GetBoneTransform(HumanBodyBones.Neck), anim.GetBoneTransform(HumanBodyBones.Head), virtualNeck, realJoint[0]);
 
-            yield return new WaitForSeconds(0.046f); // 0.044f로 했을 때 안튕김
+            rightShoulder = new StoreJointData(anim.GetBoneTransform(HumanBodyBones.UpperChest), anim.GetBoneTransform(HumanBodyBones.RightUpperArm), virtualUpperChest, realJoint[2]);
+            leftShoulder = new StoreJointData(anim.GetBoneTransform(HumanBodyBones.UpperChest), anim.GetBoneTransform(HumanBodyBones.LeftUpperArm), virtualUpperChest, realJoint[1]);
 
+
+            //limbsJointData 배열에 팔다리에 관한 데이터(캐릭터 팔다리 방향, 회전 각도 등) 저장
+            AddModelJointData(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, realJoint[2], realJoint[4]);
+            AddModelJointData(HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand, realJoint[4], realJoint[6]);
+
+            AddModelJointData(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, realJoint[1], realJoint[3]);
+            AddModelJointData(HumanBodyBones.LeftLowerArm, HumanBodyBones.LeftHand, realJoint[3], realJoint[5]);
+
+            AddModelJointData(HumanBodyBones.RightUpperLeg, HumanBodyBones.RightLowerLeg, realJoint[8], realJoint[10]);
+            AddModelJointData(HumanBodyBones.RightLowerLeg, HumanBodyBones.RightFoot, realJoint[10], realJoint[12]);
+
+            AddModelJointData(HumanBodyBones.LeftUpperLeg, HumanBodyBones.LeftLowerLeg, realJoint[7], realJoint[9]);
+            AddModelJointData(HumanBodyBones.LeftLowerLeg, HumanBodyBones.LeftFoot, realJoint[9], realJoint[11]);
+
+            //배열에 저장된 팔다리에 관한 데이터를 이용해 조인트 회전각도 바꾸는 코드
+            foreach (var i in limbsJointData)
+            {
+                Quaternion changeRot = Quaternion.FromToRotation(i.Value.initialDir, Vector3.Slerp(i.Value.initialDir, i.Value.CurrentDirection, 0.5f));
+                i.Value.parent.rotation = changeRot * i.Value.initialRotation;
+            }
+
+            rightHip.RotateTorso(rightHip, 0.5f);
+            leftHip.RotateTorso(leftHip, 0.5f);
+            //neckTwist.RotateTorso(neckTwist, 0.05f);
+            //chestTwist.RotateTorso(chestTwist, 0.2f);
+            rightShoulder.RotateTorso(rightShoulder, 0.4f); //Hips 관절 회전으로 RightUpperArm과 LeftUpperArm의 회전이 더 들어감
+            leftShoulder.RotateTorso(leftShoulder, 0.4f);
+
+            anim.GetBoneTransform(HumanBodyBones.Hips).position = virtualHips;
+
+
+
+            hoonsuText.text = scorer.hoonsuMessage; // 훈수의 말 업데이트
+
+
+            yield return new WaitForSeconds(0.065f); // 파이썬 서버와의 통신 속도를 맞추기 위한 딜레이
+
+            //좌표 초기화
             virtualNeck = Vector3.zero;
             virtualUpperChest = Vector3.zero;
             virtualHips = Vector3.zero;
             limbsJointData.Clear();
-            
+
         }
     }
 
-    public void CharactorMove() {
-        
-        virtualHips = (realJoint[7] + realJoint[8]) / 2.0f;// 가상의 힙 관절의 위치 구하기
-        virtualHips.y += 0.075f;
-        virtualHips.y += 0.95f;
-        virtualHips.x -= 0.5f;
-        virtualHips.z += 0.5f;
-
-        virtualNeck = (realJoint[1] + realJoint[2]) / 2.0f; // 가상의 목 관절의 위치 구하기
-        virtualNeck.y += 0.05f;
-
-        virtualUpperChest = (realJoint[1] + realJoint[2]) / 2.0f; //가상의 UpperChest 관절 위치 구하기
-        virtualUpperChest.y -= 0.1f;
-
-        for (int i = 0; i < 13; i++)
-        {
-            realJoint[i].y *= -1f; // 전달 받은 조인트 값의 y좌표가 땅과 반대로 되어있음
-            realJoint[i] += virtualHips; // pose_world_landmarks는 엉덩이 중간 포인트를 기준으로 상대좌표이므로 Hips의 위치를 더해 절대 좌표를 구해준다.
-                                         //Debug.Log("realJoint: " + realJoint[i]);
-        }
-
-        virtualNeck += virtualHips;
-        virtualUpperChest += virtualHips;
-
-        //상체 몸통 움직이기 위한 상체 관절 StoreJointData 클래스에 저장
-        rightHip = new StoreJointData(anim.GetBoneTransform(HumanBodyBones.Hips), anim.GetBoneTransform(HumanBodyBones.RightUpperLeg), virtualHips, realJoint[8]);
-        leftHip = new StoreJointData(anim.GetBoneTransform(HumanBodyBones.Hips), anim.GetBoneTransform(HumanBodyBones.LeftUpperLeg), virtualHips, realJoint[7]);
-
-        neckTwist = new StoreJointData(anim.GetBoneTransform(HumanBodyBones.Neck), anim.GetBoneTransform(HumanBodyBones.Head), virtualNeck, realJoint[0]);
-
-        rightShoulder = new StoreJointData(anim.GetBoneTransform(HumanBodyBones.UpperChest), anim.GetBoneTransform(HumanBodyBones.RightUpperArm), virtualUpperChest, realJoint[2]);
-        leftShoulder = new StoreJointData(anim.GetBoneTransform(HumanBodyBones.UpperChest), anim.GetBoneTransform(HumanBodyBones.LeftUpperArm), virtualUpperChest, realJoint[1]);
-
-
-        //limbsJointData 배열에 팔다리에 관한 데이터(캐릭터 팔다리 방향, 회전 각도 등) 저장
-        AddModelJointData(HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, realJoint[2], realJoint[4]);
-        AddModelJointData(HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand, realJoint[4], realJoint[6]);
-
-        AddModelJointData(HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, realJoint[1], realJoint[3]);
-        AddModelJointData(HumanBodyBones.LeftLowerArm, HumanBodyBones.LeftHand, realJoint[3], realJoint[5]);
-
-        AddModelJointData(HumanBodyBones.RightUpperLeg, HumanBodyBones.RightLowerLeg, realJoint[8], realJoint[10]);
-        AddModelJointData(HumanBodyBones.RightLowerLeg, HumanBodyBones.RightFoot, realJoint[10], realJoint[12]);
-
-        AddModelJointData(HumanBodyBones.LeftUpperLeg, HumanBodyBones.LeftLowerLeg, realJoint[7], realJoint[9]);
-        AddModelJointData(HumanBodyBones.LeftLowerLeg, HumanBodyBones.LeftFoot, realJoint[9], realJoint[11]);
-
-        //배열에 저장된 팔다리에 관한 데이터를 이용해 조인트 회전각도 바꾸는 코드
-        foreach (var i in limbsJointData)
-        {
-            Quaternion changeRot = Quaternion.FromToRotation(i.Value.initialDir, Vector3.Slerp(i.Value.initialDir, i.Value.CurrentDirection, 0.2f));
-            i.Value.parent.rotation = changeRot * i.Value.initialRotation;
-        }
-
-        rightHip.RotateTorso(rightHip, 0.5f);
-        leftHip.RotateTorso(leftHip, 0.5f);
-        //neckTwist.RotateTorso(neckTwist, 0.05f);
-        //chestTwist.RotateTorso(chestTwist, 0.2f);
-        rightShoulder.RotateTorso(rightShoulder, 0.2f); //Hips 관절 회전으로 RightUpperArm과 LeftUpperArm의 회전이 더 들어감
-        leftShoulder.RotateTorso(leftShoulder, 0.2f);
-
-        anim.GetBoneTransform(HumanBodyBones.Hips).position = virtualHips;
-    }
 }
 
 class StoreJointData //avatar joint관련 데이터 저장하는 클래스
